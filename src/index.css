@@ -1,0 +1,95 @@
+:root {
+  --blue: #0055a2;
+  --gold: #e5a823;
+  --gray: #939597;
+  --lgray: #d2d2d2;
+  --dgray: #666666;
+  --ink: #1a1a1a;
+  --pale: #f0f4f9;
+  --red: #b00020;
+  --green: #1b7a3d;
+  font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+  background: #fff;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+.app { max-width: 1380px; margin: 0 auto; padding: 0 16px 40px; }
+header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; border-bottom: 4px solid var(--blue); padding: 18px 0 12px; margin-bottom: 14px; }
+.kicker { font-size: 12px; letter-spacing: 2px; font-weight: bold; color: var(--dgray); }
+h1 { margin: 2px 0 4px; color: var(--blue); font-size: 30px; }
+header p { margin: 0; color: var(--dgray); }
+nav button, .controls button, .playhead button, .now button, .rulepick button { font: inherit; border: 1.5px solid var(--blue); background: #fff; color: var(--blue); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+nav button.on, button.primary { background: var(--blue); color: #fff; }
+nav { display: flex; gap: 6px; flex-wrap: wrap; }
+h2 { color: var(--blue); font-size: 20px; margin: 18px 0 6px; }
+h3 { color: var(--blue); margin: 0 0 4px; font-size: 16px; display: flex; flex-direction: column; }
+h3 small { color: var(--dgray); font-weight: normal; font-size: 11px; }
+.muted { color: var(--dgray); }
+
+.controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.controls label { display: flex; gap: 6px; align-items: center; color: var(--dgray); font-size: 14px; }
+.controls select { font: inherit; }
+.jump { display: flex; gap: 4px; align-items: center; color: var(--dgray); font-size: 14px; margin-left: 8px; }
+.jump button { padding: 3px 8px; font-size: 13px; }
+.phase { margin-left: auto; font-weight: bold; color: var(--blue); }
+.now { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: var(--pale); border: 1.5px solid var(--blue); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+.now.done { display: block; line-height: 1.5; }
+
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media (max-width: 1100px) { .grid4 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .grid4 { grid-template-columns: 1fr; } }
+.col .note { font-size: 12px; color: var(--dgray); min-height: 32px; margin-bottom: 4px; }
+.boards1 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 10px; }
+
+.board { border: 1.5px solid var(--blue); border-radius: 8px; padding: 6px 8px; margin-bottom: 6px; background: #fff; transition: box-shadow 0.15s; }
+.board.hl { box-shadow: 0 0 0 3px var(--gold); }
+.board.dead { border-color: var(--gray); background: #f4f4f4; color: var(--gray); }
+.board.dead .board-head b { color: var(--gray); text-decoration: line-through; }
+.board.clickable { cursor: pointer; }
+.board.clickable:hover { box-shadow: 0 0 0 3px var(--pale), 0 0 0 4px var(--blue); }
+.board.clickable.nofit { opacity: 0.55; }
+.board-head { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--dgray); margin-bottom: 3px; }
+.board-head b { color: var(--blue); font-size: 13px; }
+.bar-row { display: grid; grid-template-columns: 40px 1fr 38px; align-items: center; gap: 6px; margin: 2px 0; }
+.bar-label { font-size: 10px; font-weight: bold; color: var(--dgray); display: flex; flex-direction: column; line-height: 1.1; }
+.bar-label small { font-weight: normal; font-size: 8px; }
+.bar { position: relative; height: 16px; border: 1px solid var(--gray); background: #fff; overflow: hidden; }
+.bar.dead { background: #eee; }
+.seg { position: absolute; top: 0; height: 100%; border-right: 1px solid #fff; }
+.tick { position: absolute; top: 0; height: 100%; width: 1px; background: #fff; opacity: 0.9; }
+.tick.major { background: var(--ink); opacity: 0.35; }
+.bar-num { font-size: 10px; color: var(--dgray); text-align: right; font-variant-numeric: tabular-nums; }
+
+.stats { font-size: 13px; color: var(--dgray); border-top: 3px solid var(--gold); padding-top: 6px; margin-top: 4px; }
+.stats b { color: var(--blue); }
+.stats.done { background: var(--pale); padding: 6px; border-radius: 6px; }
+
+.card { display: inline-flex; flex-direction: column; align-items: center; border: 2px solid; border-radius: 6px; padding: 4px 10px; background: #fff; min-width: 96px; position: relative; }
+.card.small { padding: 2px 10px; }
+.card .card-n { position: absolute; left: 4px; top: 1px; font-size: 9px; color: var(--dgray); }
+.card b { font-size: 13px; }
+.card span { font-size: 11.5px; }
+.card small { font-size: 9.5px; color: var(--dgray); }
+
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--dgray); margin: 10px 0; }
+.legend i, .dot { display: inline-block; width: 12px; height: 12px; vertical-align: -2px; margin-right: 3px; }
+
+table.score, table.deck { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 10px; }
+table.score th, table.deck th { background: var(--blue); color: #fff; text-align: left; padding: 6px 8px; }
+table.score td, table.deck td { padding: 6px 8px; border-bottom: 1px solid var(--lgray); vertical-align: top; }
+table.score caption { caption-side: bottom; text-align: left; color: var(--dgray); font-size: 12px; padding-top: 6px; }
+table.deck { max-width: 520px; }
+
+.pick p, .about p, .about dd { line-height: 1.55; max-width: 900px; }
+.rulepick { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+.rulepick button { text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 12px; }
+.rulepick button span { color: var(--ink); font-size: 13px; line-height: 1.4; }
+.playhead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.log { font-size: 13px; color: var(--dgray); max-height: 220px; overflow: auto; border: 1px solid var(--lgray); padding: 8px 8px 8px 28px; margin: 10px 0 0; }
+.about dt { font-weight: bold; color: var(--blue); margin-top: 8px; }
+.about dt small { color: var(--dgray); font-weight: normal; }
+.about dd { margin: 2px 0 0; }
+.about a { color: var(--blue); }
+code { font-family: "Courier New", monospace; font-size: 0.95em; }
+footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid var(--lgray); color: var(--dgray); font-size: 12px; }
