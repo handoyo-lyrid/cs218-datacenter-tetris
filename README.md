@@ -8,10 +8,10 @@ The same 24 pods, four placement rules, one big arrival, one host failure. Only 
 
 ## Run it
 
-In the browser: https://handoyo-lyrid.github.io/cs218-datacenter-tetris/ (GitHub Pages, published by the workflow in this repository). Or on your own machine:
+In the browser, at the GitHub Pages URL for this repository (Settings, Pages, once enabled). Or on your own machine:
 
 ```
-git clone https://github.com/handoyo-lyrid/cs218-datacenter-tetris.git
+git clone <this repository>
 cd cs218-datacenter-tetris
 npm install
 npm run dev
@@ -23,7 +23,7 @@ npm run dev
 
 Bin packing: given items of different sizes and bins of one fixed capacity, place every item using as few bins as possible. Here the items are pods with two sizes at once (cores and GB), the bins are hosts (32 cores, 128 GB), and every host in use costs $1.00 an hour. No known method finds the fewest bins quickly as the number of items grows, so every real scheduler uses a rule of thumb, and the question is which rule and what it costs when it is wrong.
 
-**Watch** runs four rules on the same 24 pods in the same order, then hands each one a BIG pod (16 cores, 64 GB), then kills each one's busiest host and re-places its pods on the survivors. Step through it or let it play. The scoreboard at the end is the trade-off table from the lecture.
+**Watch** runs four rules on the same 24 pods in the same order, then hands each one a BIG pod (16 cores, 64 GB), then kills each one's busiest host and re-places its pods on the survivors. Step through it or let it play. The scoreboard at the end is the trade-off table from the lecture. The fleet size is adjustable (2 to 8 hosts; the activity is 5): with fewer than four hosts no rule can place the whole deck, and the pods that fit nowhere are shown as pending, the way Kubernetes leaves a pod unscheduled when no node has room for its requests.
 
 **Play** lets you pick a rule and place each card by hand. After every card the app says what the rule would have done, and moves the pod there, so your board stays comparable to the key. It counts the placements that differed from the rule.
 

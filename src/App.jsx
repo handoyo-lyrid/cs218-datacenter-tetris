@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DECK, BIG, HOST, SHAPES, squares, totals, lowerBound } from "./deck.js";
-import { RULES, RULE_IDS, ALL, emptyHosts, choose, place, orderFor, fits } from "./rules.js";
+import { RULES, RULE_IDS, runAll, emptyHosts, choose, place, orderFor, fits, MIN_HOSTS, MAX_HOSTS } from "./rules.js";
+import { HOSTS } from "./deck.js";
 
 const CELLS = 32;
 
@@ -89,7 +90,38 @@ function Legend() {
 }
 
 /* ---------------- Watch: four rules side by side ---------------- */
+function HostPicker({ n, setN }) {
+  return (
+    <label>
+      hosts in the fleet
+      <select value={n} onChange={(e) => setN(+e.target.value)}>
+        {Array.from({ length: MAX_HOSTS - MIN_HOSTS + 1 }, (_, i) => MIN_HOSTS + i).map((k) => (
+          <option key={k} value={k}>
+            {k}{k === HOSTS ? " (the activity)" : ""}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function Pending({ pods, label }) {
+  if (!pods || pods.length === 0) return null;
+  return (
+    <div className="pending">
+      <b>{label || "pending, nowhere to go"} ({pods.length}):</b>{" "}
+      {pods.map((p) => (
+        <span key={p.name} className="chip" style={{ borderColor: p.color }}>
+          {p.name}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function Watch() {
+  const [n, setN] = useState(HOSTS);
+  const ALL = useMemo(() => runAll(n), [n]);
   const maxLen = Math.max(...RULE_IDS.map((r) => ALL[r].steps.length));
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -115,6 +147,7 @@ function Watch() {
         </button>
         <button onClick={() => setT((x) => Math.min(maxLen - 1, x + 1))}>step ▶</button>
         <button onClick={() => setT(maxLen - 1)}>▶|</button>
+        <HostPicker n={n} setN={(k) => { setPlaying(false); setT(0); setN(k); }} />
         <label>
           speed
           <select value={speed} onChange={(e) => setSpeed(+e.target.value)}>
@@ -155,6 +188,7 @@ function Watch() {
               {st.hosts.map((h) => (
                 <Board key={h.id} host={h} highlight={st.host === h.id && st.phase !== "fail"} />
               ))}
+              <Pending pods={st.pending} />
               <div className={"stats" + (done ? " done" : "")}>
                 <div>
                   hosts used{t >= 24 ? " after Round 1" : ""} <b>{t >= 24 ? summary.used : st.hosts.filter((h) => h.pods.length).length}</b> · <b>${t >= 24 ? summary.used : st.hosts.filter((h) => h.pods.length).length}/hr</b>
@@ -176,7 +210,8 @@ function Watch() {
         })}
       </div>
       <Legend />
-      {t >= maxLen - 1 && <Scoreboard />}
+      {n < 4 && <p className="muted">Total demand is 116 cores and 328 GB; {n} hosts hold {n * 32} cores and {n * 128} GB, so no rule can place everything. What differs is which pods wait.</p>}
+      {t >= maxLen - 1 && <Scoreboard ALL={ALL} />}
     </section>
   );
 }
@@ -192,13 +227,15 @@ function wasted(summary) {
   return parts.join("; ");
 }
 
-function Scoreboard() {
+function Scoreboard({ ALL }) {
+  const n = ALL[RULE_IDS[0]].summary.n;
   return (
     <table className="score">
       <thead>
         <tr>
           <th>Rule</th>
           <th>Hosts, $/hr</th>
+          <th>Pending after Round 1</th>
           <th>Wasted where</th>
           <th>BIG (16 / 64)</th>
           <th>Host that died</th>
@@ -214,8 +251,9 @@ function Scoreboard() {
                 <b>{RULES[r].label}</b>
               </td>
               <td>
-                {s.used}, ${s.dollars}
+                {s.used} of {n}, ${s.dollars}
               </td>
+              <td>{s.unplaced.length ? `${s.unplaced.length} (${s.unplaced.map((p) => p.name).join(", ")})` : "none"}</td>
               <td>{wasted(s)}</td>
               <td>{s.bigHost === null ? "fits nowhere" : `fits, host ${s.bigHost}`}</td>
               <td>
@@ -230,7 +268,9 @@ function Scoreboard() {
         })}
       </tbody>
       <caption>
-        Free across all five hosts is 44 cores and 312 GB under every rule; where it sits is the difference. An empty host at $1.00 an hour is $730 a month.
+        {n === HOSTS
+          ? "Free across all five hosts is 44 cores and 312 GB under every rule; where it sits is the difference. An empty host at $1.00 an hour is $730 a month."
+          : `${n} hosts hold ${n * 32} cores and ${n * 128} GB against 116 cores and 328 GB of demand. A pending pod is demand the fleet could not take under that rule. An empty host at $1.00 an hour is $730 a month.`}
       </caption>
     </table>
   );
@@ -238,6 +278,7 @@ function Scoreboard() {
 
 /* ---------------- Play: place by hand, checked against the rule ---------------- */
 function Play() {
+  const [n, setN] = useState(HOSTS);
   const [rule, setRule] = useState(null);
   const [hosts, setHosts] = useState(emptyHosts());
   const [i, setI] = useState(0); // index into the round's queue
@@ -248,10 +289,11 @@ function Play() {
   const [lost, setLost] = useState([]);
   const [dead, setDead] = useState(null);
   const [usedR1, setUsedR1] = useState(0);
+  const [pending, setPending] = useState([]);
 
   const start = (r) => {
     setRule(r);
-    setHosts(emptyHosts());
+    setHosts(emptyHosts(n));
     setQueue(orderFor(r));
     setI(0);
     setPhase("round1");
@@ -260,6 +302,7 @@ function Play() {
     setLost([]);
     setDead(null);
     setUsedR1(0);
+    setPending([]);
   };
   const current = phase === "big" ? BIG : queue[i];
   const answer = current ? choose(hosts, current, rule) : null;
@@ -302,6 +345,7 @@ function Play() {
     let h2 = hosts;
     if (answer !== null) h2 = place(hosts, current, answer);
     else if (phase === "fail") setLost((x) => [...x, current]);
+    else setPending((x) => [...x, current]);
     setHosts(h2);
     advance(h2);
   };
@@ -310,6 +354,10 @@ function Play() {
     return (
       <section className="pick">
         <p>Pick a rule. You will place the same 24 cards the Watch tab uses, then BIG, then re-place the pods of a host that loses power. After each card the app says what the rule would have done, and moves the pod there, so your board stays comparable to the answer key.</p>
+        <div className="controls">
+          <HostPicker n={n} setN={setN} />
+          <span className="muted">Fewer than four hosts cannot hold the whole deck; a pod that fits nowhere stays pending.</span>
+        </div>
         <div className="rulepick">
           {RULE_IDS.map((r) => (
             <button key={r} onClick={() => start(r)}>
@@ -359,6 +407,7 @@ function Play() {
           />
         ))}
       </div>
+      <Pending pods={pending} label="pending, fit nowhere" />
       <div className="stats">
         hosts used <b>{phase === "round1" ? used : usedR1}</b> · <b>${phase === "round1" ? used : usedR1}/hr</b> · placements that differed from the rule: <b>{misses}</b>
       </div>

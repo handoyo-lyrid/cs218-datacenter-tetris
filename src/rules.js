@@ -26,8 +26,9 @@ export const RULES = {
 };
 export const RULE_IDS = Object.keys(RULES);
 
-export const emptyHosts = () =>
-  Array.from({ length: HOSTS }, (_, i) => ({ id: i + 1, cores: 0, gb: 0, pods: [], alive: true }));
+export const MIN_HOSTS = 2, MAX_HOSTS = 8;
+export const emptyHosts = (n = HOSTS) =>
+  Array.from({ length: n }, (_, i) => ({ id: i + 1, cores: 0, gb: 0, pods: [], alive: true }));
 
 export const fits = (h, p) => h.alive && h.cores + p.cores <= HOST.cores && h.gb + p.gb <= HOST.gb;
 
@@ -56,10 +57,11 @@ export function orderFor(rule) {
 }
 
 // Every step of all three rounds, so a viewer can scrub. Each step is a full snapshot.
-export function simulate(rule) {
+// n is the number of hosts in the fleet. A pod that fits nowhere stays pending (Kubernetes leaves it unscheduled).
+export function simulate(rule, n = HOSTS) {
   const order = orderFor(rule);
-  let hosts = emptyHosts();
-  const steps = [{ phase: "start", hosts, note: "Five empty hosts.", pod: null, host: null }];
+  let hosts = emptyHosts(n);
+  const steps = [{ phase: "start", hosts, note: `${n} empty hosts.`, pod: null, host: null, pending: [] }];
   const unplaced = [];
   for (const p of order) {
     const id = choose(hosts, p, rule);
@@ -70,7 +72,8 @@ export function simulate(rule) {
       hosts,
       pod: p,
       host: id,
-      note: id === null ? `${p.name} fits nowhere.` : `${p.name} (${p.cores} c / ${p.gb} GB) to host ${id}.`,
+      pending: [...unplaced],
+      note: id === null ? `${p.name} (${p.cores} c / ${p.gb} GB) fits nowhere: pending.` : `${p.name} (${p.cores} c / ${p.gb} GB) to host ${id}.`,
     });
   }
   const used = hosts.filter((h) => h.pods.length).length;
@@ -82,7 +85,8 @@ export function simulate(rule) {
     hosts: hostsAfterBig,
     pod: BIG,
     host: bigHost,
-    note: bigHost === null ? "BIG (16 c / 64 GB) fits nowhere." : `BIG (16 c / 64 GB) to host ${bigHost}.`,
+    pending: [...unplaced],
+    note: bigHost === null ? "BIG (16 c / 64 GB) fits nowhere: pending." : `BIG (16 c / 64 GB) to host ${bigHost}.`,
   });
   // Round 3: with BIG on the board, the host with the most pods (ties to the lowest id) loses power
   const counts = hostsAfterBig.map((h) => h.pods.length);
@@ -95,6 +99,7 @@ export function simulate(rule) {
     hosts: after,
     pod: null,
     host: deadId,
+    pending: [...unplaced],
     note: `Host ${deadId} loses power with ${victims.length} pods on it. They come off in card order and are re-placed by the rule.`,
     victims,
   });
@@ -108,12 +113,14 @@ export function simulate(rule) {
       hosts: after,
       pod: p,
       host: id,
+      pending: [...unplaced, ...lost],
       note: id === null ? `${p.name} fits nowhere on the surviving hosts.` : `${p.name} re-placed on host ${id}.`,
     });
   }
   const free = hosts.reduce((t, h) => ({ cores: t.cores + HOST.cores - h.cores, gb: t.gb + HOST.gb - h.gb }), { cores: 0, gb: 0 });
   const summary = {
     rule,
+    n,
     used,
     dollars: used * HOST.dollarsPerHour,
     unplaced,
@@ -127,4 +134,9 @@ export function simulate(rule) {
   return { steps, summary };
 }
 
-export const ALL = Object.fromEntries(RULE_IDS.map((r) => [r, simulate(r)]));
+const cache = new Map();
+export function runAll(n = HOSTS) {
+  if (!cache.has(n)) cache.set(n, Object.fromEntries(RULE_IDS.map((r) => [r, simulate(r, n)])));
+  return cache.get(n);
+}
+export const ALL = runAll(HOSTS);
